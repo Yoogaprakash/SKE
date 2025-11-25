@@ -1,0 +1,95 @@
+{
+  "version": "1.0",
+  "description": "Shop Data Structure - This file can be used as a backup or reference. Use Settings > Export Data to download current data, or Settings > Import Data to restore from a backup.",
+  "exportedAt": "2024-01-01T00:00:00.000Z",
+  "company": {
+    "shopName": "Shop",
+    "shopTagline": "Buy",
+    "shopAddress": "",
+    "shopContact": "Phone: +91-90000 00000",
+    "upiId": "buy@upi",
+    "billSeries": 1,
+    "gstEnabled": true
+  },
+  "categories": [
+    {
+      "id": "cat-001",
+      "name": "Lights",
+      "description": "Lighting solutions and bulbs"
+    },
+    {
+      "id": "cat-002",
+      "name": "Fans",
+      "description": "Cooling and ventilation"
+    },
+    {
+      "id": "cat-003",
+      "name": "Accessories",
+      "description": "Electrical accessories"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod-001",
+      "name": "LED Bulb",
+      "brand": "Philips",
+      "price": 250,
+      "gstRate": 18,
+      "stock": 50,
+      "categoryId": "cat-001",
+      "description": "Energy-efficient LED bulb",
+      "image": "assets/img/placeholder.svg"
+    },
+    {
+      "id": "prod-002",
+      "name": "Ceiling Fan",
+      "brand": "Havells",
+      "price": 2500,
+      "gstRate": 18,
+      "stock": 20,
+      "categoryId": "cat-002",
+      "description": "High-speed ceiling fan",
+      "image": "assets/img/placeholder.svg"
+    },
+    {
+      "id": "prod-003",
+      "name": "Switch Board",
+      "brand": "Anchor",
+      "price": 350,
+      "gstRate": 18,
+      "stock": 100,
+      "categoryId": "cat-003",
+      "description": "2-gang switch board",
+      "image": "assets/img/placeholder.svg"
+    }
+  ],
+  "sales": [
+    {
+      "id": "sale-001",
+      "billNumber": "BILL20240101120000-0001",
+      "timestamp": "2024-01-01T12:00:00.000Z",
+      "items": [
+        {
+          "id": "prod-001",
+          "name": "LED Bulb",
+          "brand": "Philips",
+          "quantity": 2,
+          "price": 250,
+          "gstRate": 18,
+          "lineSubtotal": 500,
+          "gstAmount": 90,
+          "lineTotal": 590
+        }
+      ],
+      "subtotal": 500,
+      "tax": 90,
+      "total": 590,
+      "gstEnabled": true,
+      "customer": {
+        "name": "Walk-in Customer",
+        "phone": ""
+      }
+    }
+  ],
+  "notes": "This JSON file is a reference structure. The application stores data in browser's localStorage. To backup or transfer data between devices, use: Settings > Export Data (creates JSON file) and Settings > Import Data (restores from JSON file). Each bill is automatically saved when 'Mark as Paid' is clicked."
+}
