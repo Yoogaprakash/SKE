@@ -414,10 +414,20 @@
       state.sessionUserId = credentials.username;
       persistSession();
       setRole(matchedRole, { skipRender: true });
-      renderCategories();
-      renderProducts();
-      renderCart();
-      updateRoleUi();
+      persistSession();
+      setRole(matchedRole, { skipRender: true });
+
+      // Wrap rendering in try-catch to ensure cleanup runs even if rendering fails
+      try {
+        renderCategories();
+        renderProducts();
+        renderCart();
+        updateRoleUi();
+      } catch (renderErr) {
+        console.error('Error rendering UI after login:', renderErr);
+        // We continue to cleanup so the user isn't stuck
+      }
+
       // Strongly ensure modal/backdrop/blur are removed to avoid stuck UI.
       (function clearModalImmediatelyAndRetry() {
         try {
@@ -447,6 +457,8 @@
           // remove bootstrap backdrops and modal-open body class
           document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
           document.body.classList.remove('modal-open');
+          document.body.style.overflow = '';
+          document.body.style.paddingRight = '';
 
           // remove our blur and loader
           document.body.classList.remove('blurred');
@@ -465,6 +477,8 @@
               modalEl2.style.display = 'none';
             }
             document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
             document.body.classList.remove('blurred');
             document.getElementById('globalLoader')?.classList.remove('show');
           } catch (err) {
@@ -481,6 +495,8 @@
         }
         document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
         document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
       } catch (err) {
         // non-fatal
       }
@@ -694,12 +710,12 @@
         if (openModal && openModal.id !== 'exitModal') {
           const modalInstance = bootstrap.Modal.getInstance(openModal);
           if (modalInstance) modalInstance.hide();
-        } 
+        }
         // If we went back past home (state is null or not home), show exit confirmation
         else if (!state || state.view !== 'home') {
           // Restore home state to prevent immediate exit
           history.pushState({ view: 'home' }, document.title);
-          
+
           const exitModalEl = document.getElementById('exitModal');
           if (exitModalEl) {
             const exitModal = bootstrap.Modal.getOrCreateInstance(exitModalEl);
