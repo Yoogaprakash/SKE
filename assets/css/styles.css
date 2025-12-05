@@ -805,6 +805,15 @@ h4 {
   transition: all 0.3s ease;
 }
 
+/* Ensure Custom Item Modal is above Draggable Cart (11050) */
+#customItemModal {
+  z-index: 11060 !important;
+}
+
+#customItemModal .modal-backdrop {
+  z-index: 11055 !important;
+}
+
 .nav-tabs .nav-link:hover {
   color: #1f6feb;
   border-bottom-color: rgba(31, 111, 235, 0.3);

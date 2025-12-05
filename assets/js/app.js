@@ -673,7 +673,81 @@
       }
     }
 
+    function initNavigation() {
+      // Set initial state
+      if (!history.state) {
+        history.replaceState({ view: 'home' }, document.title);
+      }
+
+      let isPoppingState = false;
+      let isExiting = false;
+
+      // Handle Popstate
+      window.addEventListener('popstate', (event) => {
+        if (isExiting) return;
+
+        isPoppingState = true;
+        const state = event.state;
+        const openModal = document.querySelector('.modal.show');
+
+        // If we are back at home but a modal is open, close it
+        if (openModal && openModal.id !== 'exitModal') {
+          const modalInstance = bootstrap.Modal.getInstance(openModal);
+          if (modalInstance) modalInstance.hide();
+        } 
+        // If we went back past home (state is null or not home), show exit confirmation
+        else if (!state || state.view !== 'home') {
+          // Restore home state to prevent immediate exit
+          history.pushState({ view: 'home' }, document.title);
+          
+          const exitModalEl = document.getElementById('exitModal');
+          if (exitModalEl) {
+            const exitModal = bootstrap.Modal.getOrCreateInstance(exitModalEl);
+            exitModal.show();
+          }
+        }
+
+        setTimeout(() => { isPoppingState = false; }, 50);
+      });
+
+      // Handle Modal Events
+      document.querySelectorAll('.modal').forEach(modalEl => {
+        modalEl.addEventListener('show.bs.modal', () => {
+          if (isPoppingState) return;
+          if (modalEl.id === 'exitModal') return;
+
+          history.pushState({ view: 'modal', modalId: modalEl.id }, document.title);
+        });
+
+        modalEl.addEventListener('hide.bs.modal', () => {
+          if (isPoppingState) return;
+          if (modalEl.id === 'exitModal') return;
+
+          // If user closed modal manually, go back to remove the modal state
+          if (history.state?.view === 'modal' && history.state?.modalId === modalEl.id) {
+            history.back();
+          }
+        });
+      });
+
+      // Handle Exit Confirm
+      const confirmExitBtn = document.getElementById('confirmExitBtn');
+      if (confirmExitBtn) {
+        confirmExitBtn.addEventListener('click', () => {
+          isExiting = true;
+          history.back();
+          setTimeout(() => {
+            window.close();
+            if (navigator.app && navigator.app.exitApp) {
+              navigator.app.exitApp();
+            }
+          }, 100);
+        });
+      }
+    }
+
     function init() {
+      initNavigation();
       // Show loading spinner while data loads
       const loader = document.getElementById('globalLoader');
       if (loader) {
