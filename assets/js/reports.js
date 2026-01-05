@@ -147,6 +147,8 @@
         viewBill(sale);
       } else if (target.classList.contains('print-bill-btn')) {
         downloadBill(sale);
+      } else if (target.classList.contains('delete-bill-btn')) {
+        deleteSale(sale.id);
       }
     });
 
@@ -182,6 +184,9 @@
         const saleDay = saleDate.toISOString().slice(0, 10);
         const saleMonth = saleDate.toISOString().slice(0, 7);
         const saleYear = saleDate.getFullYear().toString();
+
+        // Skip deleted sales
+        if (sale.status === 2) return acc;
 
         if (saleDay === todayKey) {
           acc.daily.total += sale.total;
@@ -249,6 +254,9 @@
         if (!hasCategory) return false;
       }
 
+      // Filter out deleted sales
+      if (sale.status === 2) return false;
+
       return true;
     });
   }
@@ -305,6 +313,9 @@
               <button class="btn btn-outline-secondary print-bill-btn" data-sale-id="${sale.id}" title="Download PDF">
                 <i class="bi bi-printer"></i>
               </button>
+              <button class="btn btn-outline-danger delete-bill-btn" data-sale-id="${sale.id}" title="Delete Bill">
+                <i class="bi bi-trash"></i>
+              </button>
             </div>
           </td>
           <td>${sale.billNumber || '-'}</td>
@@ -355,6 +366,23 @@
     });
 
     printInvoice(invoiceModel, state.settings);
+  }
+
+  function deleteSale(saleId) {
+    const sale = state.sales.find((s) => s.id === saleId);
+    if (!sale) return;
+
+    if (!confirm(`Delete bill #${sale.billNumber}? This action cannot be undone.`)) {
+      return;
+    }
+
+    // Soft delete: set status to 2
+    sale.status = 2;
+    setStoredData(STORAGE_KEYS.sales, state.sales);
+
+    // Refresh UI
+    renderSummary();
+    renderTable();
   }
 
   function exportExcel() {

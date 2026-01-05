@@ -176,6 +176,13 @@
                 <input type="tel" class="form-control" id="customerPhoneInput" placeholder="Phone" />
               </div>
             </div>
+            <div class="col-12">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                <textarea class="form-control" id="customerAddressInput" rows="2"
+                  placeholder="Address (Optional)"></textarea>
+              </div>
+            </div>
           </div>
         </div>
         <div class="d-grid gap-2 mt-3">
@@ -378,6 +385,12 @@
                       <label class="form-check-label" for="gstToggle">Enable GST on Bills</label>
                     </div>
                   </div>
+                  <div class="col-12">
+                    <label for="billNotesInput" class="form-label">Bill Notes / Terms</label>
+                    <textarea class="form-control" id="billNotesInput" rows="3"
+                      placeholder="e.g. Thank you for your business!"></textarea>
+                    <div class="form-text">This text will appear at the bottom of every bill.</div>
+                  </div>
                 </div>
                 <div class="alert alert-info small mt-3">
                   The QR preview updates automatically. Use letters, numbers, dot, dash, or underscore before @.
@@ -394,9 +407,14 @@
             <div class="tab-pane fade" id="categoriesTabContent" role="tabpanel">
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0">Manage Categories</h6>
-                <button class="btn btn-sm btn-primary" id="addCategoryBtn" type="button">
-                  <i class="bi bi-plus-lg"></i> Add
-                </button>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-outline-danger d-none" id="deleteSelectedCategoriesBtn" type="button">
+                    <i class="bi bi-trash"></i> Delete Selected
+                  </button>
+                  <button class="btn btn-sm btn-primary" id="addCategoryBtn" type="button">
+                    <i class="bi bi-plus-lg"></i> Add
+                  </button>
+                </div>
               </div>
               <div class="list-group" id="categoriesList"></div>
             </div>
@@ -405,9 +423,14 @@
             <div class="tab-pane fade" id="productsTabContent" role="tabpanel">
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0">Manage Products</h6>
-                <button class="btn btn-sm btn-success" id="addItemBtn" type="button">
-                  <i class="bi bi-plus-lg"></i> Add Product
-                </button>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-outline-danger d-none" id="deleteSelectedProductsBtn" type="button">
+                    <i class="bi bi-trash"></i> Delete Selected
+                  </button>
+                  <button class="btn btn-sm btn-success" id="addItemBtn" type="button">
+                    <i class="bi bi-plus-lg"></i> Add Product
+                  </button>
+                </div>
               </div>
               <div class="list-group" id="productsList"></div>
             </div>

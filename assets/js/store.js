@@ -188,11 +188,29 @@
     async clearSales() {
       if (!this.initialized) return false;
       try {
-        // Clear sales node
-        await this.db.ref(CENTRAL_ROOT + '/sales').remove();
-        // Clear sales from data snapshot
-        await this.db.ref(CENTRAL_ROOT + '/data/sales').set([]);
-        safeLog('Cleared central sales data');
+        // Soft delete: update status to 2 for all sales
+        const salesRef = this.db.ref(CENTRAL_ROOT + '/sales');
+        const snapshot = await salesRef.once('value');
+        const sales = snapshot.val();
+
+        if (sales) {
+          const updates = {};
+          Object.keys(sales).forEach(key => {
+            updates[key + '/status'] = 2;
+          });
+          await salesRef.update(updates);
+        }
+
+        // Also update data snapshot
+        const dataSalesRef = this.db.ref(CENTRAL_ROOT + '/data/sales');
+        const dataSnapshot = await dataSalesRef.once('value');
+        const dataSales = dataSnapshot.val();
+        if (Array.isArray(dataSales)) {
+          dataSales.forEach(s => s.status = 2);
+          await dataSalesRef.set(dataSales);
+        }
+
+        safeLog('Soft deleted central sales data');
         return true;
       } catch (err) {
         console.error('Failed to clear central sales', err);

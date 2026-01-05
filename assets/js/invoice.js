@@ -149,6 +149,7 @@
             shopAddress,
             shopContact,
             gstNo,
+            billNotes,
         } = settings;
 
         return {
@@ -163,6 +164,7 @@
             timestamp,
             billNumber,
             customer,
+            billNotes: billNotes || '',
         };
     }
 
@@ -179,6 +181,7 @@
             timestamp,
             billNumber,
             customer,
+            billNotes,
         } = model;
 
         // Ensure we have valid data
@@ -195,9 +198,11 @@
         const billHtml = billNumber ? escapeHtml(billNumber) : '';
         const customerName = escapeHtml(customer?.name || 'Walk-in Customer');
         const customerPhone = escapeHtml(customer?.phone || 'N/A');
+        const customerAddress = customer?.address ? escapeHtml(customer.address) : '';
         const customerHtml = `
       <div class="invoice-meta-row"><span class="label">Customer:</span><span>${customerName}</span></div>
       <div class="invoice-meta-row"><span class="label">Phone:</span><span>${customerPhone}</span></div>
+      ${customerAddress ? `<div class="invoice-meta-row"><span class="label">Address:</span><span>${customerAddress}</span></div>` : ''}
     `;
 
         const tableHeader = gstEnabled
@@ -301,8 +306,8 @@
       .invoice-header { text-align: center; margin-bottom: 10px; }
       .invoice-header h1 { margin-bottom: 4px; font-size: 22px; font-weight: bold; }
       .invoice-meta { margin-bottom: 10px; font-size: 12px; }
-      .invoice-meta-row { display: flex; justify-content: space-between; margin-bottom: 3px; gap: 12px; }
-      .invoice-meta-row .label { font-weight: 600; color: #444; }
+      .invoice-meta-row { display: flex; justify-content: flex-start; margin-bottom: 3px; gap: 12px; }
+      .invoice-meta-row .label { font-weight: 600; color: #444; min-width: 80px; }
       .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
       .invoice-table th, .invoice-table td { border: 1px solid #bbb; padding: 6px; font-size: 12px; }
       .invoice-table th { background-color: #e8eef7; font-weight: 700; }
@@ -341,6 +346,7 @@
           ${tableFooter}
         </table>
         <div class="invoice-summary">${summaryRows}</div>
+        ${billNotes ? `<div class="small-text text-muted mt-2" style="white-space: pre-wrap;">${escapeHtml(billNotes)}</div>` : ''}
         <div class="invoice-footer">Thank you for shopping with us!</div>
       </div>
     `;

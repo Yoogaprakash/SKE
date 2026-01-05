@@ -231,6 +231,7 @@
     const adminOnlyControls = document.querySelectorAll('.admin-only');
     const customerNameInput = document.getElementById('customerNameInput');
     const customerPhoneInput = document.getElementById('customerPhoneInput');
+    const customerAddressInput = document.getElementById('customerAddressInput');
     const completeSaleBtn = document.getElementById('completeSaleBtn');
     const itemImageFileInput = document.getElementById('itemImageFile');
     const itemImagePreview = document.getElementById('itemImagePreview');
@@ -323,6 +324,9 @@
       if (customerPhoneInput) {
         customerPhoneInput.value = state.customer.phone;
       }
+      if (customerAddressInput) {
+        customerAddressInput.value = state.customer.address || '';
+      }
     }
 
     function refreshCustomerStateFromInputs() {
@@ -332,14 +336,19 @@
       if (customerPhoneInput) {
         state.customer.phone = customerPhoneInput.value.trim();
       }
+      if (customerAddressInput) {
+        state.customer.address = customerAddressInput.value.trim();
+      }
     }
 
     function getCustomerSnapshot() {
       const name = state.customer.name?.trim() ?? '';
       const phone = state.customer.phone?.trim() ?? '';
+      const address = state.customer.address?.trim() ?? '';
       return {
         name: name || 'Walk-in Customer',
         phone: phone || '',
+        address: address || '',
       };
     }
 
@@ -644,6 +653,10 @@
       }
       if (gstToggle) {
         gstToggle.checked = gstEnabled !== false;
+      }
+      const billNotesInput = document.getElementById('billNotesInput');
+      if (billNotesInput) {
+        billNotesInput.value = state.settings.billNotes || '';
       }
       if (navShopName) {
         navShopName.textContent = shopName || DEFAULT_SETTINGS.shopName;
@@ -1076,6 +1089,8 @@
       }
 
       state.categories.forEach((category) => {
+        if (category.status === 2) return;
+
         const button = document.createElement('button');
         button.type = 'button';
         button.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center ${category.id === state.selectedCategoryId ? 'active' : ''
@@ -1154,6 +1169,9 @@
           return matchesName || matchesBrand || matchesCategory || matchesDescription;
         });
       }
+
+      // Filter out deleted items
+      itemsToDisplay = itemsToDisplay.filter(item => item.status !== 2);
 
       if (!itemsToDisplay.length) {
         const message = searchQuery && searchQuery.trim()
@@ -1840,6 +1858,7 @@
           id: crypto.randomUUID(),
           name,
           description,
+          status: 1, // Active
         };
         state.categories.push(newCategory);
         state.selectedCategoryId = newCategory.id;
@@ -1861,14 +1880,22 @@
       if (!category) return;
       if (
         !confirm(
-          `Delete category "${category.name}" and all its items? This action cannot be undone.`,
+          `Delete category "${category.name}"? This action cannot be undone.`,
         )
       ) {
         return;
       }
 
-      state.categories = state.categories.filter((cat) => cat.id !== categoryId);
-      state.items = state.items.filter((item) => item.categoryId !== categoryId);
+      // Soft delete: set status to 2
+      category.status = 2;
+
+      // Also soft delete all items in this category
+      state.items.forEach(item => {
+        if (item.categoryId === categoryId) {
+          item.status = 2;
+        }
+      });
+
       setStoredData(STORAGE_KEYS.categories, state.categories);
       setStoredData(STORAGE_KEYS.items, state.items);
 
@@ -1989,6 +2016,7 @@
           description,
           gstRate,
           stock,
+          status: 1, // Active
         });
       }
 
@@ -2011,7 +2039,8 @@
         return;
       }
 
-      state.items = state.items.filter((it) => it.id !== itemId);
+      // Soft delete: set status to 2
+      item.status = 2;
       setStoredData(STORAGE_KEYS.items, state.items);
       removeFromCart(itemId);
       renderProducts();
@@ -2091,6 +2120,7 @@
         total: totals.total,
         gstEnabled,
         customer: customerInfo,
+        status: 1, // Active
       };
 
       lineItems.forEach((lineItem) => {
@@ -2120,7 +2150,7 @@
       applySettingsToUi();
 
       state.cart = [];
-      state.customer = { name: '', phone: '' };
+      state.customer = { name: '', phone: '', address: '' };
       syncCustomerInputs();
       renderCart();
       renderProducts();
@@ -2293,6 +2323,7 @@
       const gstNo = gstNoInput?.value?.trim() ?? '';
       const billSeriesValue = parseInt(billSeriesInput?.value ?? '1', 10);
       const gstEnabled = gstToggle ? gstToggle.checked : true;
+      const billNotes = document.getElementById('billNotesInput')?.value?.trim() ?? '';
 
       state.settings = {
         ...state.settings,
@@ -2304,6 +2335,7 @@
         upiId: sanitizedValue,
         gstEnabled,
         billSeries: Number.isNaN(billSeriesValue) || billSeriesValue < 1 ? 1 : billSeriesValue,
+        billNotes,
       };
       setStoredData(STORAGE_KEYS.settings, state.settings);
       applySettingsToUi();
@@ -2429,14 +2461,16 @@
       if (confirm('Are you sure you want to clear ALL sales history? This action cannot be undone.')) {
         const password = prompt('Please enter the password to confirm deletion:');
         if (password === 'Delete@0000') {
-          localStorage.removeItem(STORAGE_KEYS.sales);
+          // Soft delete: set status to 2 for all sales
+          sales.forEach(sale => sale.status = 2);
+          setStoredData(STORAGE_KEYS.sales, sales);
 
-          // Clear from central store if enabled
+          // Clear from central store if enabled (will perform soft delete there too)
           if (window.CENTRAL_STORE_ENABLED && window.CentralStore && typeof window.CentralStore.clearSales === 'function') {
             window.CentralStore.clearSales().catch(err => console.warn('Failed to clear central sales', err));
           }
 
-          alert('All sales data has been cleared.');
+          alert('All sales data has been cleared (soft deleted).');
         } else {
           alert('Incorrect password. Action cancelled.');
         }
@@ -2725,21 +2759,38 @@
 
     function renderCategoriesInSettings() {
       const categoriesList = document.getElementById('categoriesList');
+      const deleteSelectedBtn = document.getElementById('deleteSelectedCategoriesBtn');
       if (!categoriesList) return;
 
       categoriesList.innerHTML = '';
-      if (!state.categories.length) {
+
+      // Filter out deleted categories
+      const activeCategories = state.categories.filter(c => c.status !== 2);
+
+      if (!activeCategories.length) {
         categoriesList.innerHTML = '<div class="alert alert-info mb-0">No categories yet</div>';
+        if (deleteSelectedBtn) deleteSelectedBtn.classList.add('d-none');
         return;
       }
 
-      state.categories.forEach((category) => {
+      if (deleteSelectedBtn) {
+        deleteSelectedBtn.classList.add('d-none');
+        // Remove old listener to avoid duplicates (simplified approach: cloning)
+        const newBtn = deleteSelectedBtn.cloneNode(true);
+        deleteSelectedBtn.parentNode.replaceChild(newBtn, deleteSelectedBtn);
+        newBtn.addEventListener('click', deleteSelectedCategories);
+      }
+
+      activeCategories.forEach((category) => {
         const item = document.createElement('div');
         item.className = 'list-group-item d-flex justify-content-between align-items-center';
         item.innerHTML = `
-        <div>
-          <h6 class="mb-1">${category.name}</h6>
-          <small class="text-muted">${category.description || '(No description)'}</small>
+        <div class="d-flex align-items-center gap-2">
+          <input class="form-check-input category-checkbox" type="checkbox" value="${category.id}" style="cursor: pointer;">
+          <div>
+            <h6 class="mb-1">${category.name}</h6>
+            <small class="text-muted">${category.description || '(No description)'}</small>
+          </div>
         </div>
         <div class="btn-group btn-group-sm" role="group">
           <button class="btn btn-outline-primary edit-category" data-id="${category.id}" title="Edit">
@@ -2750,6 +2801,8 @@
           </button>
         </div>
       `;
+
+        item.querySelector('.category-checkbox').addEventListener('change', updateCategoryDeleteButton);
 
         item.querySelector('.edit-category')?.addEventListener('click', () => {
           openCategoryModal(category);
@@ -2765,27 +2818,94 @@
       });
     }
 
-    function renderProductsInSettings() {
-      const productsList = document.getElementById('productsList');
-      if (!productsList) return;
+    function updateCategoryDeleteButton() {
+      const checkboxes = document.querySelectorAll('.category-checkbox:checked');
+      const btn = document.getElementById('deleteSelectedCategoriesBtn');
+      if (btn) {
+        if (checkboxes.length > 0) {
+          btn.classList.remove('d-none');
+          btn.textContent = `Delete Selected (${checkboxes.length})`;
+        } else {
+          btn.classList.add('d-none');
+        }
+      }
+    }
 
-      productsList.innerHTML = '';
-      if (!state.items.length) {
-        productsList.innerHTML = '<div class="alert alert-info mb-0">No products yet</div>';
+    function deleteSelectedCategories() {
+      const checkboxes = document.querySelectorAll('.category-checkbox:checked');
+      if (!checkboxes.length) return;
+
+      if (!confirm(`Delete ${checkboxes.length} selected categories? This will also delete all items in these categories.`)) {
         return;
       }
 
-      state.items.forEach((product) => {
+      const idsToDelete = Array.from(checkboxes).map(cb => cb.value);
+
+      idsToDelete.forEach(catId => {
+        const category = state.categories.find(c => c.id === catId);
+        if (category) {
+          category.status = 2; // Soft delete
+
+          // Soft delete items in this category
+          state.items.forEach(item => {
+            if (item.categoryId === catId) {
+              item.status = 2;
+            }
+          });
+        }
+      });
+
+      setStoredData(STORAGE_KEYS.categories, state.categories);
+      setStoredData(STORAGE_KEYS.items, state.items);
+
+      // Reset selection if deleted
+      if (idsToDelete.includes(state.selectedCategoryId)) {
+        state.selectedCategoryId = state.categories.find(c => c.status !== 2)?.id ?? null;
+      }
+
+      renderCategoriesInSettings();
+      renderCategories();
+      renderProducts();
+    }
+
+    function renderProductsInSettings() {
+      const productsList = document.getElementById('productsList');
+      const deleteSelectedBtn = document.getElementById('deleteSelectedProductsBtn');
+      if (!productsList) return;
+
+      productsList.innerHTML = '';
+
+      // Filter out deleted items
+      const activeItems = state.items.filter(i => i.status !== 2);
+
+      if (!activeItems.length) {
+        productsList.innerHTML = '<div class="alert alert-info mb-0">No products yet</div>';
+        if (deleteSelectedBtn) deleteSelectedBtn.classList.add('d-none');
+        return;
+      }
+
+      if (deleteSelectedBtn) {
+        deleteSelectedBtn.classList.add('d-none');
+        // Remove old listener
+        const newBtn = deleteSelectedBtn.cloneNode(true);
+        deleteSelectedBtn.parentNode.replaceChild(newBtn, deleteSelectedBtn);
+        newBtn.addEventListener('click', deleteSelectedItems);
+      }
+
+      activeItems.forEach((product) => {
         const category = state.categories.find((c) => c.id === product.categoryId);
         const item = document.createElement('div');
         item.className = 'list-group-item d-flex justify-content-between align-items-center';
         item.innerHTML = `
-        <div style="flex: 1;">
-          <h6 class="mb-1">${product.name}</h6>
-          <small class="text-muted">
-            ${product.brand ? product.brand + ' • ' : ''}₹${product.price.toFixed(2)} • ${category?.name || 'Uncategorized'
+        <div class="d-flex align-items-center gap-2" style="flex: 1;">
+          <input class="form-check-input product-checkbox" type="checkbox" value="${product.id}" style="cursor: pointer;">
+          <div>
+            <h6 class="mb-1">${product.name}</h6>
+            <small class="text-muted">
+              ${product.brand ? product.brand + ' • ' : ''}₹${product.price.toFixed(2)} • ${category?.name || 'Uncategorized'
           }
-          </small>
+            </small>
+          </div>
         </div>
         <div class="btn-group btn-group-sm" role="group">
           <button class="btn btn-outline-primary edit-product" data-id="${product.id}" title="Edit">
@@ -2796,6 +2916,8 @@
           </button>
         </div>
       `;
+
+        item.querySelector('.product-checkbox').addEventListener('change', updateProductDeleteButton);
 
         item.querySelector('.edit-product')?.addEventListener('click', () => {
           openItemModal(product);
@@ -2809,6 +2931,42 @@
 
         productsList.appendChild(item);
       });
+    }
+
+    function updateProductDeleteButton() {
+      const checkboxes = document.querySelectorAll('.product-checkbox:checked');
+      const btn = document.getElementById('deleteSelectedProductsBtn');
+      if (btn) {
+        if (checkboxes.length > 0) {
+          btn.classList.remove('d-none');
+          btn.textContent = `Delete Selected (${checkboxes.length})`;
+        } else {
+          btn.classList.add('d-none');
+        }
+      }
+    }
+
+    function deleteSelectedItems() {
+      const checkboxes = document.querySelectorAll('.product-checkbox:checked');
+      if (!checkboxes.length) return;
+
+      if (!confirm(`Delete ${checkboxes.length} selected products?`)) {
+        return;
+      }
+
+      const idsToDelete = Array.from(checkboxes).map(cb => cb.value);
+
+      idsToDelete.forEach(itemId => {
+        const item = state.items.find(i => i.id === itemId);
+        if (item) {
+          item.status = 2; // Soft delete
+        }
+        removeFromCart(itemId);
+      });
+
+      setStoredData(STORAGE_KEYS.items, state.items);
+      renderProductsInSettings();
+      renderProducts();
     }
 
     document.addEventListener('DOMContentLoaded', init);
